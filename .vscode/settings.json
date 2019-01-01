@@ -1,0 +1,6 @@
+{
+    "terminal.integrated.env.osx": {
+        "PATH": "/Users/dylan/.platformio/penv/bin:/Users/dylan/.platformio/penv:/Users/dylan/.cargo/bin:/Users/dylan/.rbenv/shims:/Users/dylan/.nvm/versions/node/v8.10.0/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/local/bin:/opt/local/sbin:/usr/local/apache-ant-1.9.3/bin:/Users/dylan/.gem/ruby/1.9.1/bin:/usr/X11/bin:/Applications/maude:/usr/local/subversion/bin:/usr/local/bison/bin:/usr/local/gwTeX/bin/i386-apple-darwin-current:/usr/local/gnu-gcc/bin:/Users/dylan/Library/Haskell/bin:/usr/local/wireshark/bin:/usr/local/avispa-1.1:/usr/local/gprolog-1.3.1/bin:/Applications/pvs-4.2-ix86-MacOSX-allegro/:/usr/local/binutils-2.21/bin:/usr/local/autoconf-2.68/bin:/usr/local/automake-1.11.1/bin:/Applications/MetasploitFramework3:/Applications/Murphi3.1-gwd/bin:/Users/dylan/Sites/AWS/ec2-api-tools-1.5.2.3/bin:/usr/local/socat-1.7.2.1/bin:/usr/local/mlton-20130715/bin:/usr/local/xz-5.0.5/bin:/Users/dylan/Documents/ProgrammingProjects/GoWorkspace:/Users/dylan/jobber-dev-shared/gohome/bin:/usr/local/protobuf/bin:/usr/local/ssdeep/bin:/usr/local/ssdeep/bin:/Applications/Postgres.app/Contents/Versions/latest/bin",
+        "PLATFORMIO_CALLER": "vscode"
+    }
+}
