@@ -23,7 +23,7 @@ FCC info:
 namespace radio {
 
 typedef enum {
-    REMOTE_MSG_ENGAGE,
+    REMOTE_MSG_ENGAGE = 1,
     REMOTE_MSG_DISENGAGE,
     LOCK_MSG_SUCCESS,
     LOCK_MSG_UNAUTHN,
@@ -35,6 +35,13 @@ typedef struct {
     uint8_t unused[6];
 } __attribute__((packed)) msg_t; // must be 7 bytes
 
+typedef enum {
+    ERR_NULL = 0,
+    ERR_BAD_MSG,
+    ERR_UNAUTHN,
+    ERR_TIMEOUT,
+} error_t;
+
 void setup(const uint8_t *key, uint8_t key_len, uint8_t my_id);
 
 /*
@@ -45,11 +52,18 @@ Send message.
 int send(const msg_t *msg, uint8_t to);
 
 /*
-Receive a message.  If no message is available, returns NULL immediately.
+Receive an authentic message.  If no authentic message is available,
+returns NULL immediately.
 
-@return A message on success; NULL on failure.
+@param error_p If an error occurs, an appropriate code is written here
+and NULL is returned.
+(May be NULL.)
+
+@return A message on success; NULL on error.
 */
-const msg_t *recv();
+const msg_t *recv(error_t *error_p);
+
+const msg_t *recvTimeout(uint8_t timeout, error_t *error_p);
 
 void setModeIdle();
 void setModeRx();

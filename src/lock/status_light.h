@@ -4,12 +4,11 @@
 namespace status_light {
 
 typedef enum {
-    STATUS_GOOD,
-    STATUS_BAD,
+    STATUS_ENGAGED,
+    STATUS_DISENGAGED,
 } status_t;
 
-void init();
-
+void setup();
 void show_status(status_t status);
 
 };

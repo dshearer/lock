@@ -55,6 +55,8 @@ static const uint8_t       *g_key = NULL; // 16 bytes
 static uint8_t              g_key_len = 0; // 8 bytes
 
 #define CHECK_INTEGRITY
+// #define SWITCH_RADIO_MODE
+// #define SEND_ACK  // adds ~2,302 ms to send operation
 
 void setup(const uint8_t *key, uint8_t key_len, uint8_t my_id)
 {
@@ -68,6 +70,8 @@ void setup(const uint8_t *key, uint8_t key_len, uint8_t my_id)
 
 int send(const msg_t *msg, uint8_t to)
 {
+    const unsigned long start_time = millis();
+
     // increment nonce
     ++g_my_latest_nonce;
 
@@ -80,14 +84,15 @@ int send(const msg_t *msg, uint8_t to)
     memcpy(&g_packet_1.hashed_msg.nonce,   &g_my_latest_nonce,
         sizeof(g_packet_1.hashed_msg.nonce));
     memcpy(&g_packet_1.hashed_msg.msg, msg, sizeof(g_packet_1.hashed_msg.msg));
-    Serial.println("Computing digest");
+    
     #ifdef CHECK_INTEGRITY
-    const unsigned start_time = millis();
+    Serial.println("Computing digest");
+    const unsigned digest_start_time = millis();
     const uint8_t *digest = hmac::compute(&g_packet_1.hashed_msg,
         sizeof(g_packet_1.hashed_msg), g_key, g_key_len);
-    const unsigned millis_diff = millis() - start_time;
+    const unsigned digest_millis_diff = millis() - digest_start_time;
     Serial.print("Digest time (ms): ");
-    Serial.println(millis_diff);
+    Serial.println(digest_millis_diff);
     Serial.println("Copying digest");
     memcpy(
         g_packet_1.digest_1, 
@@ -102,36 +107,49 @@ int send(const msg_t *msg, uint8_t to)
     // send msgs
     ASSERT(sizeof(g_packet_1) <= RH_NRF24_MAX_MESSAGE_LEN);
     if (!g_manager.sendtoWait((uint8_t *) &g_packet_1, sizeof(g_packet_1), to)) {
-        Serial.println("sendtoWait 1 err");
+        Serial.println(F("sendtoWait 1 err"));
         return -1;
     }
     ASSERT(sizeof(g_packet_2) <= RH_NRF24_MAX_MESSAGE_LEN);
     if (!g_manager.sendtoWait((uint8_t *) &g_packet_2, sizeof(g_packet_2), to)) {
-        Serial.println("sendtoWait 2 err");
+        Serial.println(F("sendtoWait 2 err"));
         return -1;
     }
 
+    #ifdef SEND_ACK
     // listen for ack
     uint8_t len = sizeof(g_buf);
     if (!g_manager.recvfromAckTimeout(g_buf, &len, 5000)) {
-        Serial.println("Never got ack");
+        Serial.println(F("Never got ack"));
         return -1;
     }
     ack_packet_t ack = {0};
     if (len != sizeof(ack)) {
-        Serial.println("Got something other than ack");
+        Serial.println(F("Got something other than ack"));
         return -1;
     }
     memcpy(&ack, g_buf, len);
     if (ack.type != PACKET_TYPE_ACK) {
-        Serial.println("Invalid ack packet");
+        Serial.println(F("Invalid ack packet"));
         return -1;
     }
+    #endif
+
+    const unsigned long time_diff = millis() - start_time;
+    Serial.print("Send time: ");
+    Serial.println(time_diff);
 
     return 0;
 }
 
-const msg_t *recv()
+#define RET_ERR(_err) \
+do { \
+    if (error_p != NULL) { \
+        *error_p = (_err); \
+    } \
+} while (false)
+
+const msg_t *recv(error_t *error_p)
 {
     if (!g_manager.available()) {
         return NULL;
@@ -144,28 +162,33 @@ const msg_t *recv()
         return NULL;
     }
     if (len != sizeof(g_packet_1)) {
-        Serial.println("Didn't get packet 1");
+        Serial.println(F("Didn't get packet 1"));
+        RET_ERR(ERR_BAD_MSG);
         return NULL;
     }
     memcpy(&g_packet_1, g_buf, len);
     if (g_packet_1.type != PACKET_TYPE_1) {
-        Serial.println("Invalid packet");
+        Serial.println(F("Invalid packet"));
+        RET_ERR(ERR_BAD_MSG);
         return NULL;
     }
 
     // get packet 2
     len = sizeof(g_buf);
     if (!g_manager.recvfromAckTimeout(g_buf, &len, 5000)) {
-        Serial.println("Never got packet 2");
+        Serial.println(F("Never got packet 2"));
+        RET_ERR(ERR_BAD_MSG);
         return NULL;
     }
     if (len != sizeof(g_packet_2)) {
-        Serial.println("Didn't get packet 2");
+        Serial.println(F("Didn't get packet 2"));
+        RET_ERR(ERR_BAD_MSG);
         return NULL;
     }
     memcpy(&g_packet_2, g_buf, len);
     if (g_packet_2.type != PACKET_TYPE_2) {
-        Serial.println("Invalid packet");
+        Serial.println(F("Invalid packet"));
+        RET_ERR(ERR_BAD_MSG);
         return NULL;
     }
 
@@ -176,13 +199,15 @@ const msg_t *recv()
         hmac::verify(&g_packet_1.hashed_msg, sizeof(g_packet_1.hashed_msg),
             g_key, sizeof(g_key), g_packet_1.digest_1, g_packet_2.digest_2);
     if (!digest_ok) {
-        Serial.println("Bad digest");
+        Serial.println(F("Bad digest"));
+        RET_ERR(ERR_UNAUTHN);
         return NULL;
     }
 
     // check packet's nonce
     if (g_packet_1.hashed_msg.nonce < g_other_latest_nonce) {
-        Serial.println("Bad nonce");
+        Serial.println(F("Bad nonce"));
+        RET_ERR(ERR_UNAUTHN);
         return NULL;
     }
 
@@ -190,11 +215,13 @@ const msg_t *recv()
 
     /* Msg's integrity is good. */
 
+    #ifdef SEND_ACK
     // send ack
-    ack_packet_t ack = {PACKET_TYPE_ACK};
+    ack_packet_t ack = {.type = PACKET_TYPE_ACK};
     if (!g_manager.sendtoWait((uint8_t *) &ack, sizeof(ack), from)) {
-        Serial.println("Failed to send ack");
+        Serial.println(F("Failed to send ack"));
     }
+    #endif
 
     // update nonce
     g_other_latest_nonce = g_packet_1.hashed_msg.nonce;
@@ -203,14 +230,39 @@ const msg_t *recv()
     return &g_packet_1.hashed_msg.msg;
 }
 
+const msg_t *recvTimeout(uint8_t timeout, error_t *error_p)
+{
+    const unsigned long end_time = millis() + (timeout * 1000UL);
+    error_t local_err = ERR_NULL;
+    while (millis() < end_time)
+    {
+        const msg_t *msg = recv(&local_err);
+        if (msg == NULL && local_err == ERR_NULL) {
+            continue;
+        }
+
+        /* Got msg or error */
+        RET_ERR(local_err);
+        return msg;
+    }
+
+    /* Timeout */
+    RET_ERR(ERR_TIMEOUT);
+    return NULL;
+}
+
 void setModeIdle()
 {
+    #ifdef SWITCH_RADIO_MODE
     g_driver.setModeIdle();
+    #endif
 }
 
 void setModeRx()
 {
+    #ifdef SWITCH_RADIO_MODE
     g_driver.setModeRx();
+    #endif
 }
 
 }

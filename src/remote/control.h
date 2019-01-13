@@ -4,8 +4,7 @@
 namespace control {
 
 void setup();
-void handleLockBtnPressed();
-void handleUnlockBtnPressed();
+void loop();
 
 }
 
