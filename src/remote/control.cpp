@@ -3,8 +3,10 @@
 #include "control.h"
 #include "status_light.h"
 
-#define ENGAGE_BTN_PIN      5
+#define ENGAGE_BTN_PIN      3
 #define DISENGAGE_BTN_PIN   2
+
+#define FEEDBACK_LED_PIN    4
 
 #define BTN_PRESSED_LEVEL   LOW
 
@@ -12,11 +14,21 @@
 
 namespace control {
 
-void setup()
+/*
+We handle button presses with interrupts, but the actual logic is done in
+the loop.
+*/
+
+static volatile uint8_t g_pushed_button = 0;
+
+static void handleEngagePressed()
 {
-    // enable internal pullup resistors for button pins
-    pinMode(ENGAGE_BTN_PIN,     INPUT_PULLUP);
-    pinMode(DISENGAGE_BTN_PIN,  INPUT_PULLUP);
+    g_pushed_button = ENGAGE_BTN_PIN;
+}
+
+static void handleDisengagePressed()
+{
+    g_pushed_button = DISENGAGE_BTN_PIN;
 }
 
 static status_light::status_t getResponse()
@@ -53,6 +65,8 @@ static void sendCmd(radio::msg_code_t cmd)
     3. Show status in LEDs.
     */
 
+   digitalWrite(FEEDBACK_LED_PIN, HIGH);
+
    const unsigned long start_time = millis();
 
     // send command
@@ -71,16 +85,60 @@ static void sendCmd(radio::msg_code_t cmd)
     const unsigned long time_diff = millis() - start_time;
     Serial.print("Op time: ");
     Serial.println(time_diff);
+
+   digitalWrite(FEEDBACK_LED_PIN, LOW);
+}
+
+static void attachInterrupts()
+{
+    attachInterrupt(digitalPinToInterrupt(ENGAGE_BTN_PIN),
+        handleEngagePressed, BTN_PRESSED_LEVEL);
+    attachInterrupt(digitalPinToInterrupt(DISENGAGE_BTN_PIN), 
+        handleDisengagePressed, BTN_PRESSED_LEVEL);
+}
+
+static void detachInterrupts()
+{
+    detachInterrupt(digitalPinToInterrupt(ENGAGE_BTN_PIN));
+    detachInterrupt(digitalPinToInterrupt(DISENGAGE_BTN_PIN));
+}
+
+void setup()
+{
+    // enable internal pullup resistors for button pins
+    pinMode(ENGAGE_BTN_PIN,     INPUT_PULLUP);
+    pinMode(DISENGAGE_BTN_PIN,  INPUT_PULLUP);
+
+    // init other pins
+    pinMode(FEEDBACK_LED_PIN, OUTPUT);
+
+    // set interrupt handlers
+    attachInterrupts();
 }
 
 void loop()
 {
-    if (digitalRead(ENGAGE_BTN_PIN) == BTN_PRESSED_LEVEL) {
+    if (g_pushed_button != 0) {
+        detachInterrupts();
+    }
+
+    switch (g_pushed_button) {
+    case ENGAGE_BTN_PIN:
+        Serial.println("Engage pushed");
         sendCmd(radio::REMOTE_MSG_ENGAGE);
-    }
-    else if (digitalRead(DISENGAGE_BTN_PIN) == BTN_PRESSED_LEVEL) {
+        break;
+
+    case DISENGAGE_BTN_PIN:
+        Serial.println("Disengage pushed");
         sendCmd(radio::REMOTE_MSG_DISENGAGE);
+        break;
     }
+
+    if (g_pushed_button != 0) {
+        attachInterrupts();
+    }
+
+    g_pushed_button = 0;
 }
 
 }
