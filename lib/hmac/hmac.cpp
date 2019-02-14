@@ -1,6 +1,6 @@
 #include <string.h>
+#include <utils.h>
 #include "hmac.h"
-#include "utils.h"
 
 #define HMAC_BLOCK_LEN_BYTES 144 // http://www.wolfgang-ehrhardt.de/hmac-sha3-testvectors.html
 

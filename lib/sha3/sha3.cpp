@@ -5,9 +5,9 @@ Guide: https://github.com/rhash/RHash/blob/master/librhash/sha3.c
 */
 
 #include <string.h>
-#include "sha3.h"
 #include "utils.h"
 #include "words.h"
+#include "sha3.h"
 
 #define PARAM_B 1600
 #define PARAM_W 64

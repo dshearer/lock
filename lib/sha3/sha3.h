@@ -3,10 +3,6 @@
 
 #include <stddef.h>
 
-#ifdef LOCAL_TEST
-#  include <stddef.h>
-#endif
-
 namespace sha3 {
     typedef enum {
         SHA3_INST_224 = 224,

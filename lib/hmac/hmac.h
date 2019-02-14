@@ -1,3 +1,6 @@
+#ifndef __HMAC_H__
+#define __HMAC_H__
+
 #include <inttypes.h>
 #include <sha3.h>
 
@@ -19,3 +22,5 @@ bool verify(
     const uint8_t *given_digest_1, const uint8_t *given_digest_2);
 
 }
+
+#endif /* __HMAC_H__ */

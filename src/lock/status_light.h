@@ -1,12 +1,9 @@
 #ifndef __STATUS_LIGHT_H__
 #define __STATUS_LIGHT_H__
 
-namespace status_light {
+#include "status.h"
 
-typedef enum {
-    STATUS_ENGAGED,
-    STATUS_DISENGAGED,
-} status_t;
+namespace status_light {
 
 void setup();
 void show_status(status_t status);

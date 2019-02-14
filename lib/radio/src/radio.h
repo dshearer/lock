@@ -3,8 +3,6 @@
 
 #include <stddef.h>
 #include <inttypes.h>
-#include <RH_NRF24.h>
-#include <RHReliableDatagram.h>
 
 /*
 A radio using the 2.4GHz band.

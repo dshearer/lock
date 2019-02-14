@@ -1,16 +1,18 @@
 #ifndef __LOCK_H__
 #define __LOCK_H__
 
-namespace lock {
+#include "status.h"
 
-typedef enum {
-    LOCK_ENGAGED,
-    LOCK_DISENGAGED,
-} lock_state_t;
+namespace lock {
 
 void setup();
 
-void set_lock_state(lock_state_t new_state);
+/*
+Engage or disengage lock.
+
+@return 0 on success; non-0 on error.
+*/
+int setLockStatus(status_t status);
 
 };
 

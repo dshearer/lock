@@ -11,9 +11,8 @@ static bool g_engaged = false;
 
 static void set_status_light()
 {
-    const status_light::status_t status = g_engaged ? 
-        status_light::STATUS_ENGAGED : 
-        status_light::STATUS_DISENGAGED;
+    const status_t status = g_engaged ? 
+        STATUS_ENGAGED : STATUS_DISENGAGED;
     status_light::show_status(status);
 }
 

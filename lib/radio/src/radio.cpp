@@ -1,10 +1,12 @@
 #include <Arduino.h>
 #include <stdlib.h>
 #include <string.h>
+#include <RH_NRF24.h>
+#include <RHReliableDatagram.h>
 #include <words.h>
 #include <utils.h>
+#include <hmac.h>
 #include "radio.h"
-#include "hmac.h"
 
 /*
 NOTE: Nonces are stored little-endian.
@@ -55,7 +57,7 @@ static const uint8_t       *g_key = NULL; // 16 bytes
 static uint8_t              g_key_len = 0; // 8 bytes
 
 #define CHECK_INTEGRITY
-// #define SWITCH_RADIO_MODE
+#define SWITCH_RADIO_MODE
 // #define SEND_ACK  // adds ~2,302 ms to send operation
 
 void setup(const uint8_t *key, uint8_t key_len, uint8_t my_id)
