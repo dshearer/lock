@@ -11,6 +11,7 @@ void setup()
 
 int setLockStatus(status_t status)
 {
+    return 0;
 }
 
 }

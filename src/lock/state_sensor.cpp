@@ -17,18 +17,11 @@ neither of them to be.  In this case, the lock is neither engaged nor
 disengaged, and its effectiveness at keeping the door closed is unknown.
 */
 
-static status_t g_status = STATUS_UNKNOWN;
-
 void setup()
 {
     // enable internal pullup resistors for button pins
     pinMode(ENGAGED_SENSOR_PIN,     INPUT_PULLUP);
     pinMode(DISENGAGED_SENSOR_PIN,  INPUT_PULLUP);
-}
-
-status_t _getStatus()
-{
-    return _getStatus(false);
 }
 
 static status_t _getStatus(bool tryingAgain)
@@ -61,6 +54,11 @@ static status_t _getStatus(bool tryingAgain)
     else {
         return STATUS_UNKNOWN;
     }
+}
+
+status_t _getStatus()
+{
+    return _getStatus(false);
 }
 
 }
