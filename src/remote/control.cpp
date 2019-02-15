@@ -65,8 +65,6 @@ static void sendCmd(radio::msg_code_t cmd)
     3. Show status in LEDs.
     */
 
-   digitalWrite(FEEDBACK_LED_PIN, HIGH);
-
    const unsigned long start_time = millis();
 
     // send command
@@ -85,8 +83,6 @@ static void sendCmd(radio::msg_code_t cmd)
     const unsigned long time_diff = millis() - start_time;
     Serial.print("Op time: ");
     Serial.println(time_diff);
-
-   digitalWrite(FEEDBACK_LED_PIN, LOW);
 }
 
 static void attachInterrupts()
@@ -125,12 +121,16 @@ void loop()
     switch (g_pushed_button) {
     case ENGAGE_BTN_PIN:
         Serial.println("Engage pushed");
+        digitalWrite(FEEDBACK_LED_PIN, HIGH);
         sendCmd(radio::REMOTE_MSG_ENGAGE);
+        digitalWrite(FEEDBACK_LED_PIN, LOW);
         break;
 
     case DISENGAGE_BTN_PIN:
         Serial.println("Disengage pushed");
+        digitalWrite(FEEDBACK_LED_PIN, HIGH);
         sendCmd(radio::REMOTE_MSG_DISENGAGE);
+        digitalWrite(FEEDBACK_LED_PIN, LOW);
         break;
     }
 
