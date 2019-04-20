@@ -37,9 +37,6 @@ void status_light::setup()
 
 void status_light::show_status(status_t status)
 {
-    Serial.println("Setting status");
-    Serial.println(status);
-
     // show light
     switch (status) {
     case STATUS_ENGAGED:

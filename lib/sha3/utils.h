@@ -5,6 +5,10 @@
 #  define MIN(_x, _y) ((_x) < (_y) ? (_x) : (_y))
 #endif
 
+#ifndef NUM_ELEMS
+#  define NUM_ELEMS(_array) (sizeof(_array)/sizeof((_array)[0]))
+#endif
+
 #ifdef NDEBUG
 #  define ASSERT
 #elif defined(LOCAL_TEST)

@@ -17,8 +17,6 @@ Guide: https://github.com/rhash/RHash/blob/master/librhash/sha3.c
 
 #define NUM_ROUNDS 24
 
-#define NUM_ELEMS(_array) (sizeof(_array)/sizeof((_array)[0]))
-
 word64_t make_word64(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4,
     uint8_t b5, uint8_t b6, uint8_t b7)
 {
