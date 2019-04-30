@@ -6,13 +6,24 @@ static char g_key[16] = {0};
 
 #define SAMPLE_SIZE 5
 
+static bool g_ok = false;
+
 void setup()
 {
     Serial.begin(9600);
+    if (hmac::init() != 0) {
+        Serial.println(F("hmac::init failed"));
+        return;
+    }
+    g_ok = true;
 }
 
 void loop()
 {
+    if (!g_ok) {
+        return;
+    }
+
     Serial.println("Starting test");
     Serial.flush();
 

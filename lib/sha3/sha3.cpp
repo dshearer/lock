@@ -236,7 +236,6 @@ public:
     {
         ASSERT(NUM_ELEMS(this->_b) == N);
         if (idx >= NUM_ELEMS(this->_b)) {
-            Serial.println(idx);
             ASSERT(idx < NUM_ELEMS(this->_b));
         }
         return this->_b[idx];
@@ -246,7 +245,6 @@ public:
     {
         ASSERT(NUM_ELEMS(this->_b) == N);
         if (idx >= NUM_ELEMS(this->_b)) {
-            Serial.println(idx);
             ASSERT(idx < NUM_ELEMS(this->_b));
         }
         return this->_b[idx];

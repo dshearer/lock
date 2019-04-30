@@ -1,0 +1,20 @@
+{
+    "name": "cryptoauthlib",
+    "build": {
+        "srcFilter": [
+            "+<*>",
+            "-<hal/hal_*.c>",
+            "-<hal/hal_*.cpp>",
+            "-<hal/swi*>",
+            "-<hal/i2c*>",
+            "+<hal/hal_arduino*.cpp>",
+            "+<hal/hal_arduino*.c>",
+            "-<mbedtls/*>"
+        ],
+        "flags": [
+            "-DATCA_NO_HEAP",
+            "-DATCA_HAL_I2C",
+            "-DATCA_NO_POLL"
+        ]
+    }
+}

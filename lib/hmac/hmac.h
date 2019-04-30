@@ -4,10 +4,16 @@
 #include <inttypes.h>
 #include <sha3.h>
 
-#define HASH_INST           sha3::SHA3_INST_224
-#define DIGEST_LEN_BYTES    (HASH_INST / 8)
+#ifdef HMAC_OWN_IMPL
+#  define HASH_INST           sha3::SHA3_INST_224
+#  define DIGEST_LEN_BYTES    (HASH_INST / 8)
+#else
+#  define DIGEST_LEN_BYTES    32
+#endif
 
 namespace hmac {
+
+int init();
 
 /*
 @return A buffer of length DIGEST_LEN_BYTES.
