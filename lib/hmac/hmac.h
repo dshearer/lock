@@ -3,17 +3,16 @@
 
 #include <inttypes.h>
 #include <sha3.h>
+#include <cryptochip.h>
 
 #ifdef HMAC_OWN_IMPL
 #  define HASH_INST           sha3::SHA3_INST_224
 #  define DIGEST_LEN_BYTES    (HASH_INST / 8)
 #else
-#  define DIGEST_LEN_BYTES    32
+#  define DIGEST_LEN_BYTES    CRYPTOCHIP_DIGEST_LEN
 #endif
 
 namespace hmac {
-
-int init();
 
 /*
 @return A buffer of length DIGEST_LEN_BYTES.

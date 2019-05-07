@@ -68,6 +68,7 @@ void setup(const uint8_t *key, uint8_t key_len, uint8_t my_id)
     // g_driver.setRF(RH_NRF24::DataRate250kbps, RH_NRF24::TransmitPower0dBm);
     g_manager.setThisAddress(my_id);
     g_manager.init();
+    cryptochip::setup();
 }
 
 int send(const msg_t *msg, uint8_t to)

@@ -1,0 +1,4 @@
+[submodule "lib/cryptoauthlib/src/cryptoauthlib"]
+	path = lib/cryptoauthlib/src/cryptoauthlib
+	url = git@github.com:dshearer/cryptoauthlib.git
+	branch = dylan-arduino
