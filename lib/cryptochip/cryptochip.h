@@ -1,8 +1,6 @@
 #ifndef __CRYPTOCHIP_H__
 #define __CRYPTOCHIP_H__
 
-#include <words.h>
-
 #define CRYPTOCHIP_DIGEST_LEN 32
 
 namespace cryptochip {
