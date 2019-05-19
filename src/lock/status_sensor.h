@@ -5,10 +5,10 @@
 
 namespace status_sensor {
 
-typedef void (*callback_t)(status_t oldStatus, status_t newStatus);
+// typedef void (*callback_t)(status_t oldStatus, status_t newStatus);
 
 void setup();
-void addCallback(callback_t cb);
+// void addCallback(callback_t cb);
 status_t getStatus();
 
 } // namespace

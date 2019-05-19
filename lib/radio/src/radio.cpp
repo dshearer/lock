@@ -68,7 +68,14 @@ void setup(const uint8_t *key, uint8_t key_len, uint8_t my_id)
     // g_driver.setRF(RH_NRF24::DataRate250kbps, RH_NRF24::TransmitPower0dBm);
     g_manager.setThisAddress(my_id);
     g_manager.init();
-    cryptochip::setup();
+    hmac::setup();
+
+    Serial.print("Pkt 1 len: ");
+    Serial.println(sizeof(g_packet_1));
+    Serial.print("Pkt 2 len: ");
+    Serial.println(sizeof(g_packet_2));
+    ASSERT(sizeof(g_packet_1) <= RH_NRF24_MAX_MESSAGE_LEN);
+    ASSERT(sizeof(g_packet_2) <= RH_NRF24_MAX_MESSAGE_LEN);
 }
 
 int send(const msg_t *msg, uint8_t to)
@@ -108,12 +115,10 @@ int send(const msg_t *msg, uint8_t to)
     #endif
 
     // send msgs
-    ASSERT(sizeof(g_packet_1) <= RH_NRF24_MAX_MESSAGE_LEN);
     if (!g_manager.sendtoWait((uint8_t *) &g_packet_1, sizeof(g_packet_1), to)) {
         Serial.println(F("sendtoWait 1 err"));
         return -1;
     }
-    ASSERT(sizeof(g_packet_2) <= RH_NRF24_MAX_MESSAGE_LEN);
     if (!g_manager.sendtoWait((uint8_t *) &g_packet_2, sizeof(g_packet_2), to)) {
         Serial.println(F("sendtoWait 2 err"));
         return -1;
@@ -152,29 +157,38 @@ do { \
     } \
 } while (false)
 
+#define RECV_PACKET(packet_nbr, packet_var, packet_type) \
+do { \
+    if (len != sizeof(packet_var)) { \
+        Serial.print(F("Wrong size for packet " # packet_nbr ": ")); \
+        Serial.print(len); \
+        Serial.print(" vs "); \
+        Serial.println(sizeof(packet_var)); \
+        RET_ERR(ERR_BAD_MSG); \
+        return NULL; \
+    } \
+    memcpy(&(packet_var), g_buf, len); \
+    if ((packet_var).type != packet_type) { \
+        Serial.println(F("Wrong type for packet " # packet_nbr)); \
+        RET_ERR(ERR_BAD_MSG); \
+        return NULL; \
+    } \
+} while (false)
+
 const msg_t *recv(error_t *error_p)
 {
     if (!g_manager.available()) {
         return NULL;
     }
 
-    // get packet 1
     uint8_t len = sizeof(g_buf);
     uint8_t from = 0;
+
+    // get packet 1
     if (!g_manager.recvfromAck(g_buf, &len, &from)) {
         return NULL;
     }
-    if (len != sizeof(g_packet_1)) {
-        Serial.println(F("Didn't get packet 1"));
-        RET_ERR(ERR_BAD_MSG);
-        return NULL;
-    }
-    memcpy(&g_packet_1, g_buf, len);
-    if (g_packet_1.type != PACKET_TYPE_1) {
-        Serial.println(F("Invalid packet"));
-        RET_ERR(ERR_BAD_MSG);
-        return NULL;
-    }
+    RECV_PACKET(1, g_packet_1, PACKET_TYPE_1);
 
     // get packet 2
     len = sizeof(g_buf);
@@ -183,17 +197,7 @@ const msg_t *recv(error_t *error_p)
         RET_ERR(ERR_BAD_MSG);
         return NULL;
     }
-    if (len != sizeof(g_packet_2)) {
-        Serial.println(F("Didn't get packet 2"));
-        RET_ERR(ERR_BAD_MSG);
-        return NULL;
-    }
-    memcpy(&g_packet_2, g_buf, len);
-    if (g_packet_2.type != PACKET_TYPE_2) {
-        Serial.println(F("Invalid packet"));
-        RET_ERR(ERR_BAD_MSG);
-        return NULL;
-    }
+    RECV_PACKET(2, g_packet_2, PACKET_TYPE_2);
 
     #ifdef CHECK_INTEGRITY
 

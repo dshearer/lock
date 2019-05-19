@@ -5,6 +5,16 @@
 
 namespace hmac {
 
+void setup()
+{
+#ifndef HMAC_OWN_IMPL
+    cryptochip::setup();
+#endif
+
+    Serial.print(F("Digest len: "));
+    Serial.println(DIGEST_LEN_BYTES);
+}
+
 #ifdef HMAC_OWN_IMPL
 
 static uint8_t g_digest[DIGEST_LEN_BYTES] = {0};
@@ -25,11 +35,6 @@ static void xor_with_const(uint8_t *dest, size_t dest_len, uint8_t value)
     {
         dest[i] ^= value;
     }
-}
-
-int init()
-{
-    return 0;
 }
 
 const uint8_t *compute(

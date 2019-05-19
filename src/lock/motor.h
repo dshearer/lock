@@ -4,8 +4,8 @@
 namespace motor {
 
 void setup();
-void runLeft();
-void runRight();
+void runEngage();
+void runDisengage();
 void stop();
 
 }

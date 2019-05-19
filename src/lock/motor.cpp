@@ -1,29 +1,30 @@
 #include <Arduino.h>
 #include "motor.h"
 
-#define LEFT_PIN    6
-#define RIGHT_PIN   7
+#define ENGAGE_PIN      7
+#define DISENGAGE_PIN   6
 
 namespace motor {
 
 void setup() {
-    pinMode(LEFT_PIN, OUTPUT);
-    pinMode(RIGHT_PIN, OUTPUT);
+    pinMode(ENGAGE_PIN, OUTPUT);
+    pinMode(DISENGAGE_PIN, OUTPUT);
+    stop();
 }
 
-void runLeft() {
-    digitalWrite(LEFT_PIN, HIGH);
-    digitalWrite(RIGHT_PIN, LOW);
+void runEngage() {
+    digitalWrite(ENGAGE_PIN, HIGH);
+    digitalWrite(DISENGAGE_PIN, LOW);
 }
 
-void runRight() {
-    digitalWrite(LEFT_PIN, LOW);
-    digitalWrite(RIGHT_PIN, HIGH);
+void runDisengage() {
+    digitalWrite(ENGAGE_PIN, LOW);
+    digitalWrite(DISENGAGE_PIN, HIGH);
 }
 
 void stop() {
-    digitalWrite(LEFT_PIN, LOW);
-    digitalWrite(RIGHT_PIN, LOW);
+    digitalWrite(ENGAGE_PIN, LOW);
+    digitalWrite(DISENGAGE_PIN, LOW);
 }
 
 }
