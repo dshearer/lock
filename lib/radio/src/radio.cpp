@@ -6,6 +6,7 @@
 #include <words.h>
 #include <utils.h>
 #include <hmac.h>
+#include <array.h>
 #include "radio.h"
 
 /*
@@ -32,12 +33,12 @@ typedef enum {
 typedef struct {
     uint8_t         type; // == PACKET_TYPE_1
     hashed_msg_t    hashed_msg; // 11 bytes
-    uint8_t         digest_1[DIGEST_LEN_BYTES/2]; // 16 bytes
+    Array<DIGEST_LEN_BYTES/2>         digest_1; // 16 bytes
 } __attribute__((packed)) packet_1_t; // 28 bytes
 
 typedef struct {
     uint8_t type; // == PACKET_TYPE_2
-    uint8_t digest_2[DIGEST_LEN_BYTES/2]; // 16 bytes
+    Array<DIGEST_LEN_BYTES/2>         digest_2; // 16 bytes
 } __attribute__((packed)) packet_2_t; // 17 bytes
 
 typedef struct {
@@ -50,32 +51,36 @@ static nonce_t              g_my_latest_nonce; // 4 bytes
 static nonce_t              g_other_latest_nonce; // 4 bytes
 static RH_NRF24             g_driver(8, 10);
 static RHReliableDatagram   g_manager(g_driver);
-static uint8_t              g_buf[RH_NRF24_MAX_MESSAGE_LEN] = {0}; // 28 bytes
-static packet_1_t           g_packet_1 = {0}; // 28 bytes
-static packet_2_t           g_packet_2 = {0}; // 16 bytes
-static const uint8_t       *g_key = NULL; // 16 bytes
-static uint8_t              g_key_len = 0; // 8 bytes
+
+static Array<sizeof(packet_1_t)> g_buf = {};
+static hashed_msg_t              g_hashed_msg;
+static Hmac                      g_hmac;
+static Array<DIGEST_LEN_BYTES>   g_digest = {};
+
+static_assert(sizeof(packet_1_t) <= RH_NRF24_MAX_MESSAGE_LEN, "Bad packet 1 len");
+static_assert(sizeof(packet_2_t) <= RH_NRF24_MAX_MESSAGE_LEN, "Bad packet 2 len");
+
 
 #define CHECK_INTEGRITY
 #define SWITCH_RADIO_MODE
 // #define SEND_ACK  // adds ~2,302 ms to send operation
 
-void setup(const uint8_t *key, uint8_t key_len, uint8_t my_id)
+void setup(CSlice<KEY_LEN_BYTES> key, uint8_t my_id)
 {
-    ASSERT(key != NULL);
-    g_key = key;
-    g_key_len = key_len;
+    Serial.println(F("radio::setup"));
     // g_driver.setRF(RH_NRF24::DataRate250kbps, RH_NRF24::TransmitPower0dBm);
     g_manager.setThisAddress(my_id);
     g_manager.init();
-    hmac::setup();
+    g_hmac.setKey(key);
 
-    Serial.print("Pkt 1 len: ");
-    Serial.println(sizeof(g_packet_1));
-    Serial.print("Pkt 2 len: ");
-    Serial.println(sizeof(g_packet_2));
-    ASSERT(sizeof(g_packet_1) <= RH_NRF24_MAX_MESSAGE_LEN);
-    ASSERT(sizeof(g_packet_2) <= RH_NRF24_MAX_MESSAGE_LEN);
+    Hmac::implOkay();
+
+    // Serial.print("Pkt 1 len: ");
+    // Serial.println(sizeof(packet_1_t));
+    // Serial.print("Pkt 2 len: ");
+    // Serial.println(sizeof(packet_2_t));
+    // Serial.print("Key len: ");
+    // Serial.println(key.size());
 }
 
 int send(const msg_t *msg, uint8_t to)
@@ -85,44 +90,48 @@ int send(const msg_t *msg, uint8_t to)
     // increment nonce
     ++g_my_latest_nonce;
 
-    // make packet
-    Serial.println("Making packets");
-    memset(&g_packet_1, 0, sizeof(g_packet_1));
-    memset(&g_packet_2, 0, sizeof(g_packet_2));
-    g_packet_1.type = PACKET_TYPE_1;
-    g_packet_2.type = PACKET_TYPE_2;
-    memcpy(&g_packet_1.hashed_msg.nonce,   &g_my_latest_nonce,
-        sizeof(g_packet_1.hashed_msg.nonce));
-    memcpy(&g_packet_1.hashed_msg.msg, msg, sizeof(g_packet_1.hashed_msg.msg));
-    
+    // make packet 1
+    Serial.println(F("Making packets"));
+    Serial.flush();
+    packet_1_t *pack_1 = g_buf.cast<packet_1_t>();
+    pack_1->type = PACKET_TYPE_1;
+    memcpy(&pack_1->hashed_msg.nonce, &g_my_latest_nonce,
+        sizeof(pack_1->hashed_msg.nonce));
+    memcpy(&pack_1->hashed_msg.msg, msg, sizeof(pack_1->hashed_msg.msg));
     #ifdef CHECK_INTEGRITY
-    Serial.println("Computing digest");
-    const unsigned digest_start_time = millis();
-    const uint8_t *digest = hmac::compute(&g_packet_1.hashed_msg,
-        sizeof(g_packet_1.hashed_msg), g_key, g_key_len);
-    const unsigned digest_millis_diff = millis() - digest_start_time;
-    Serial.print("Digest time (ms): ");
-    Serial.println(digest_millis_diff);
-    Serial.println("Copying digest");
-    memcpy(
-        g_packet_1.digest_1, 
-        digest, 
-        sizeof(g_packet_1.digest_1));
-    memcpy(
-        g_packet_2.digest_2, 
-        digest + sizeof(g_packet_1.digest_1),
-        sizeof(g_packet_2.digest_2));
+    g_hmac.init() << &pack_1->hashed_msg >> g_digest;
+    pack_1->digest_1 << g_digest.cslice<0, DIGEST_LEN_BYTES/2>();
     #endif
 
-    // send msgs
-    if (!g_manager.sendtoWait((uint8_t *) &g_packet_1, sizeof(g_packet_1), to)) {
+    // send packet 1
+    Serial.println(F("Sending pkt 1"));
+    Serial.flush();
+    if (!g_manager.sendtoWait((uint8_t *) pack_1, sizeof(*pack_1), to)) {
         Serial.println(F("sendtoWait 1 err"));
         return -1;
     }
-    if (!g_manager.sendtoWait((uint8_t *) &g_packet_2, sizeof(g_packet_2), to)) {
+
+    // make packet 2
+    Serial.println(F("Sending pkt 2"));
+    Serial.flush();
+    packet_2_t *pack_2 = g_buf.cast<packet_2_t>();
+    pack_2->type = PACKET_TYPE_2;
+    pack_2->digest_2 << g_digest.cslice<DIGEST_LEN_BYTES/2>();
+
+    // send packet 2
+    if (!g_manager.sendtoWait((uint8_t *) pack_2, sizeof(*pack_2), to)) {
         Serial.println(F("sendtoWait 2 err"));
         return -1;
     }
+    
+    // Serial.println("Computing digest");
+    // const unsigned digest_start_time = millis();
+    // const unsigned digest_millis_diff = millis() - digest_start_time;
+    // Serial.print(F("Digest time (ms): "));
+    // Serial.println(digest_millis_diff);
+    // Serial.println("Copying digest");
+    // Serial.println("Half-Done digest");
+    // Serial.println("Done digest");
 
     #ifdef SEND_ACK
     // listen for ack
@@ -144,7 +153,7 @@ int send(const msg_t *msg, uint8_t to)
     #endif
 
     const unsigned long time_diff = millis() - start_time;
-    Serial.print("Send time: ");
+    Serial.print(F("Send time: "));
     Serial.println(time_diff);
 
     return 0;
@@ -157,68 +166,98 @@ do { \
     } \
 } while (false)
 
-#define RECV_PACKET(packet_nbr, packet_var, packet_type) \
-do { \
-    if (len != sizeof(packet_var)) { \
-        Serial.print(F("Wrong size for packet " # packet_nbr ": ")); \
-        Serial.print(len); \
-        Serial.print(" vs "); \
-        Serial.println(sizeof(packet_var)); \
-        RET_ERR(ERR_BAD_MSG); \
-        return NULL; \
-    } \
-    memcpy(&(packet_var), g_buf, len); \
-    if ((packet_var).type != packet_type) { \
-        Serial.println(F("Wrong type for packet " # packet_nbr)); \
-        RET_ERR(ERR_BAD_MSG); \
-        return NULL; \
-    } \
-} while (false)
+template<typename T>
+static const T *interp_buffer(size_t len, packet_type_t ptype) {
+    if (len != sizeof(T)) {
+        Serial.print(F("Wrong size for packet "));
+        Serial.print(ptype);
+        Serial.print(F(": "));
+        Serial.print(len);
+        Serial.print(F(" vs "));
+        Serial.println(sizeof(T));
+        return NULL;
+    }
+    const T* packet = g_buf.cast<T>();
+    if (packet->type != ptype) {
+        Serial.print(F("Wrong type for packet "));
+        Serial.println(ptype);
+        return NULL;
+    }
+    return packet;
+}
 
 const msg_t *recv(error_t *error_p)
 {
     if (!g_manager.available()) {
         return NULL;
     }
-
-    uint8_t len = sizeof(g_buf);
-    uint8_t from = 0;
+    Serial.println(F("recv"));
 
     // get packet 1
-    if (!g_manager.recvfromAck(g_buf, &len, &from)) {
+    uint8_t len = sizeof(g_buf);
+    uint8_t from = 0;
+    if (!g_manager.recvfromAck((uint8_t *) g_buf.data(), &len, &from)) {
         return NULL;
     }
-    RECV_PACKET(1, g_packet_1, PACKET_TYPE_1);
+    const packet_1_t *pack_1 = interp_buffer<packet_1_t>(len, PACKET_TYPE_1);
+    if (pack_1 == NULL) {
+        RET_ERR(ERR_BAD_MSG);
+        return NULL;
+    }
+    Serial.println(F("Got pkt 1"));
+    Serial.flush();
+
+    bool badDigest = false;
+
+    // save important stuff from packet 1
+    memcpy(&g_hashed_msg, &pack_1->hashed_msg, sizeof(g_hashed_msg));
+
+    #ifdef CHECK_INTEGRITY
+    // start checking digest
+    g_hmac.init() << &pack_1->hashed_msg >> g_digest;
+    if (!Hmac::digestsEqual(g_digest.cslice<0, DIGEST_LEN_BYTES/2>(),
+        pack_1->digest_1.cslice())) {
+        badDigest = true;
+    }
+    #endif
 
     // get packet 2
     len = sizeof(g_buf);
-    if (!g_manager.recvfromAckTimeout(g_buf, &len, 5000)) {
+    if (!g_manager.recvfromAckTimeout((uint8_t *) g_buf.data(), &len, 5000)) {
         Serial.println(F("Never got packet 2"));
         RET_ERR(ERR_BAD_MSG);
         return NULL;
     }
-    RECV_PACKET(2, g_packet_2, PACKET_TYPE_2);
+    const packet_2_t *pack_2 = interp_buffer<packet_2_t>(len, PACKET_TYPE_2);
+    if (pack_2 == NULL) {
+        RET_ERR(ERR_BAD_MSG);
+        return NULL;
+    }
+    Serial.println(F("Got pkt 2"));
 
     #ifdef CHECK_INTEGRITY
+    // finish checking digest
+    if (!Hmac::digestsEqual(g_digest.cslice<DIGEST_LEN_BYTES/2>(),
+        pack_2->digest_2.cslice())) {
+        badDigest = true;
+    }
+    #endif
 
     // check packet's digest
-    const bool digest_ok  = 
-        hmac::verify(&g_packet_1.hashed_msg, sizeof(g_packet_1.hashed_msg),
-            g_key, sizeof(g_key), g_packet_1.digest_1, g_packet_2.digest_2);
-    if (!digest_ok) {
+    if (badDigest) {
         Serial.println(F("Bad digest"));
         RET_ERR(ERR_UNAUTHN);
         return NULL;
     }
+    Serial.println(F("Digest ok"));
 
     // check packet's nonce
-    if (g_packet_1.hashed_msg.nonce < g_other_latest_nonce) {
+    if (g_hashed_msg.nonce < g_other_latest_nonce) {
         Serial.println(F("Bad nonce"));
         RET_ERR(ERR_UNAUTHN);
         return NULL;
     }
-
-    #endif
+    Serial.println(F("Nonce ok"));
 
     /* Msg's integrity is good. */
 
@@ -231,10 +270,10 @@ const msg_t *recv(error_t *error_p)
     #endif
 
     // update nonce
-    g_other_latest_nonce = g_packet_1.hashed_msg.nonce;
+    g_other_latest_nonce = g_hashed_msg.nonce;
 
     // return payload to caller
-    return &g_packet_1.hashed_msg.msg;
+    return &g_hashed_msg.msg;
 }
 
 const msg_t *recvTimeout(uint8_t timeout, error_t *error_p)

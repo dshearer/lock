@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <inttypes.h>
+#include <array.h>
 
 /*
 A radio using the 2.4GHz band.
@@ -17,6 +18,8 @@ FCC info:
 
 #define LOCK_ID        1
 #define REMOTE_ID      2
+
+#define KEY_LEN_BYTES 16
 
 namespace radio {
 
@@ -40,7 +43,7 @@ typedef enum {
     ERR_TIMEOUT,
 } error_t;
 
-void setup(const uint8_t *key, uint8_t key_len, uint8_t my_id);
+void setup(CSlice<KEY_LEN_BYTES> key, uint8_t my_id);
 
 /*
 Send message.

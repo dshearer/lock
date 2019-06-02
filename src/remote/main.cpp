@@ -8,12 +8,12 @@ Remote main.
 #include "status_light.h"
 #include "control.h"
 
-static uint8_t g_key[16] = {0};
+static Array<KEY_LEN_BYTES> g_key = {};
 
 void setup()
 {
   Serial.begin(9600);
-  radio::setup(g_key, sizeof(g_key), REMOTE_ID);
+  radio::setup(g_key.cslice(), REMOTE_ID);
   status_light::setup();
   control::setup();
 }
@@ -21,7 +21,7 @@ void setup()
 void loop()
 {
   // LowPower.idle(SLEEP_FOREVER, ADC_ON, TIMER2_ON, TIMER1_ON, TIMER0_ON, SPI_ON, USART0_ON, TWI_ON);
-  Serial.print("Loop\n");
+  Serial.println(F("Loop"));
   control::loop();
 
   Serial.flush();

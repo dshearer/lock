@@ -90,26 +90,26 @@ tryAgain:
         status = STATUS_UNKNOWN;
     }
 
-    Serial.print("engaged: ");
+    Serial.print(F("engaged: "));
     Serial.println(engaged);
-    Serial.print("disengaged: ");
+    Serial.print(F("disengaged: "));
     Serial.println(disengaged);
 
-    Serial.print("Status: ");
+    Serial.print(F("Status: "));
     switch (status) {
     case STATUS_ENGAGED:
-        Serial.println("engaged");
+        Serial.println(F("engaged"));
         break;
 
     case STATUS_DISENGAGED:
-        Serial.println("disengaged");
+        Serial.println(F("disengaged"));
         break;
 
     default:
-        Serial.println("unknown");
+        Serial.println(F("unknown"));
     }
 
-    Serial.println("");
+    Serial.println(F(""));
 
     return status;
 }

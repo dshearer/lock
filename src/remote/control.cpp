@@ -70,7 +70,7 @@ static void sendCmd(radio::msg_code_t cmd)
     // send command
     const radio::msg_t msg = radio::msg_t{.code = cmd};
     if (radio::send(&msg, LOCK_ID) != 0) {
-        Serial.println("Failed to send cmd");
+        Serial.println(F("Failed to send cmd"));
         return;
     }
 
@@ -81,7 +81,7 @@ static void sendCmd(radio::msg_code_t cmd)
     status_light::show_status(status);
 
     const unsigned long time_diff = millis() - start_time;
-    Serial.print("Op time: ");
+    Serial.print(F("Op time: "));
     Serial.println(time_diff);
 }
 
@@ -120,14 +120,14 @@ void loop()
 
     switch (g_pushed_button) {
     case ENGAGE_BTN_PIN:
-        Serial.println("Engage pushed");
+        Serial.println(F("Engage pushed"));
         digitalWrite(FEEDBACK_LED_PIN, HIGH);
         sendCmd(radio::REMOTE_MSG_ENGAGE);
         digitalWrite(FEEDBACK_LED_PIN, LOW);
         break;
 
     case DISENGAGE_BTN_PIN:
-        Serial.println("Disengage pushed");
+        Serial.println(F("Disengage pushed"));
         digitalWrite(FEEDBACK_LED_PIN, HIGH);
         sendCmd(radio::REMOTE_MSG_DISENGAGE);
         digitalWrite(FEEDBACK_LED_PIN, LOW);

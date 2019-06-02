@@ -1,95 +1,51 @@
 #include <Arduino.h>
 #include <string.h>
 #include <utils.h>
+#include <myassert.h>
 #include "hmac.h"
 
-namespace hmac {
-
-void setup()
-{
-#ifndef HMAC_OWN_IMPL
-    cryptochip::setup();
-#endif
-
-    Serial.print(F("Digest len: "));
-    Serial.println(DIGEST_LEN_BYTES);
-}
-
-#ifdef HMAC_OWN_IMPL
-
-static uint8_t g_digest[DIGEST_LEN_BYTES] = {0};
-
-#define HMAC_BLOCK_LEN_BYTES 144 // http://www.wolfgang-ehrhardt.de/hmac-sha3-testvectors.html
-static uint8_t g_block[HMAC_BLOCK_LEN_BYTES] = {0};
-
-static void pad_key(void *dest, size_t dest_len, const void *key, size_t key_len)
-{
-    const size_t copy_len = MIN(key_len, dest_len);
-    memcpy(dest, key, copy_len);
-    memset(((uint8_t *) dest) + copy_len, 0, dest_len - copy_len);
-}
-
-static void xor_with_const(uint8_t *dest, size_t dest_len, uint8_t value)
-{
-    for (size_t i = 0; i < dest_len; ++i)
-    {
-        dest[i] ^= value;
+bool Hmac::implOkay() {
+    // test
+    Array<16> key = {'k', 'e', 'y'};
+    Array<5> data = {'H','e','l','l','o'};
+    const Array<DIGEST_LEN_BYTES> expected_digest = {
+        0xc7, 0x0b, 0x9f, 0x4d, 0x66, 0x5b, 0xd6, 0x29,
+        0x74, 0xaf, 0xc8, 0x35, 0x82, 0xde, 0x81, 0x0e,
+        0x72, 0xa4, 0x1a, 0x58, 0xdb, 0x82, 0xc5, 0x38,
+        0xa9, 0xd7, 0x34, 0xc9, 0x26, 0x6d, 0x32, 0x1e,
+    };
+    Array<DIGEST_LEN_BYTES> actual_digest = {};
+    Hmac hmac;
+    hmac.setKey(key.cslice());
+    hmac.init() << data >> actual_digest;
+    for (size_t i = 0; i < DIGEST_LEN_BYTES; ++i) {
+        if (expected_digest[i] != actual_digest[i]) {
+            Serial.println(F("Crypto HMAC output is wrong"));
+            return -1;
+        }
     }
-}
+    Serial.println(F("Crypto HMAC output is good"));
 
-const uint8_t *compute(
-    const void *data, size_t data_len,
-    const void *key, size_t key_len)
-{
-    // compute K ^ ipad
-    pad_key(g_block, sizeof(g_block), key, key_len);
-    xor_with_const(g_block, sizeof(g_block), 0x36);
-
-    // compute H(K ^ ipad + data)
-    sha3::init(HASH_INST);
-    // err start
-    sha3::update(g_block, sizeof(g_block));
-    // err end
-    sha3::update(data,    data_len);
-    const void *tmp = sha3::finalize(NULL);
-    memcpy(g_digest, tmp, sizeof(g_digest));
-
-    // compute K ^ opad
-    pad_key(g_block, sizeof(g_block), key, key_len);
-    xor_with_const(g_block, sizeof(g_block), 0x5c);
-
-    // compute H(K ^ opad + H(K ^ ipad + data))
-    sha3::init(HASH_INST);
-    sha3::update(g_block,  sizeof(g_block));
-    sha3::update(g_digest, sizeof(g_digest));
-    return (const uint8_t *) sha3::finalize(NULL);
-}
-
-#else // HMAC_OWN_IMPL
-
-const uint8_t *compute(
-    const void *data, size_t data_len,
-    const void *key, size_t key_len)
-{
-    return cryptochip::hmac(data, data_len, key, key_len);
-}
-
-#endif // HMAC_OWN_IMPL
-
-bool verify(
-    const void *data, size_t data_len,
-    const void *key, size_t key_len,
-    const uint8_t *given_digest_1, const uint8_t *given_digest_2)
-{
-    const uint8_t *exp_digest = compute(data, data_len, key, key_len);
-    if (memcmp(exp_digest, given_digest_1, DIGEST_LEN_BYTES/2) != 0) {
-        return false;
-    }
-    if (memcmp(exp_digest + DIGEST_LEN_BYTES/2, given_digest_2, 
-        DIGEST_LEN_BYTES/2) != 0) {
-        return false;
-    }
     return true;
 }
 
-} // namespace
+// int compute(CArrayPtr data, CSlice<16> key,
+//     Slice<DIGEST_LEN_BYTES> dest)
+// {
+//     // compute K ^ ipad
+//     (g_block << key).fill(0);
+//     g_block ^= 0x36;
+
+//     // compute H((K ^ ipad) + data)
+//     g_hash.init() << &g_block << data;
+//     g_hash.digest(dest);
+
+//     // compute K ^ opad
+//     (g_block << key).fill(0);
+//     g_block ^= 0x5c;
+
+//     // compute H((K ^ opad) + H((K ^ ipad) + data))
+//     g_hash.init() << &g_block << &dest;
+//     g_hash.digest(dest.slice());
+//     return 0;
+// }

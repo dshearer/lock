@@ -17,7 +17,6 @@
         "flags": [
             "-DATCA_NO_HEAP",
             "-DATCA_HAL_I2C",
-            "-DATCA_NO_POLL",
             "-fms-extensions",
             "-I/Users/dylan/Documents/PlatformIO/Projects/lock/lib/cryptoauthlib/src/cryptoauthlib/lib"
         ]

@@ -4,12 +4,11 @@ Lock main.
 
 #include <Arduino.h>
 #include <radio.h>
-#include <cryptochip.h>
 #include "status_light.h"
 #include "status_sensor.h"
 #include "motor.h"
 
-static uint8_t g_key[16] = {0};
+static Array<KEY_LEN_BYTES> g_key = {};
 
 static void set_status_light()
 {
@@ -56,17 +55,17 @@ static radio::msg_code_t handle_msg(const radio::msg_t *msg)
 
     switch (msg->code) {
     case radio::REMOTE_MSG_ENGAGE:
-        Serial.println("Got engage msg");
+        Serial.println(F("Got engage msg"));
         engage();
         break;
 
     case radio::REMOTE_MSG_DISENGAGE:
-        Serial.println("Got disengage msg");
+        Serial.println(F("Got disengage msg"));
         disengage();
         break;
 
     default:
-        Serial.println("Invalid command");
+        Serial.println(F("Invalid command"));
         resp_code = radio::LOCK_MSG_FAILURE;
     }
 
@@ -77,14 +76,57 @@ static radio::msg_code_t handle_msg(const radio::msg_t *msg)
 void setup()
 {
   Serial.begin(9600);
-  radio::setup(g_key, sizeof(g_key), LOCK_ID);
-  radio::setModeRx();
+  radio::setup(g_key.cslice(), LOCK_ID);
   status_light::setup();
   status_sensor::setup();
   motor::setup();
   set_status_light();
 }
 
+void loop() {
+    radio::error_t err = radio::ERR_NULL;
+    const radio::msg_t *msg = radio::recv(&err);
+    if (msg == NULL) {
+        if (err != radio::ERR_NULL) {
+            Serial.println(F("recv error"));
+        }
+        return;
+    }
+
+    // handle msg/error
+    const radio::msg_code_t resp_code = handle_msg(msg);
+
+    // send response
+    const radio::msg_t resp_msg = {.code = resp_code};
+    if (radio::send(&resp_msg, REMOTE_ID) != 0) {
+        Serial.println(F("Failed to send response"));
+    }
+}
+
+#if 0
+void loop() {
+    static Array<11> data;
+    static Array<DIGEST_LEN_BYTES> digest;
+
+    Serial.println("Computing hash");
+    int res = hmac::compute(CArrayPtr(data), g_key.cslice(), digest.slice());
+    if (res != 0) {
+        Serial.println("hmac::compute failed");
+        return;
+    }
+
+    Serial.println("Verifying hash");
+    bool vres = hmac::verify(CArrayPtr(data), g_key.cslice(), digest.cslice());
+    if (vres) {
+        Serial.println("Verified");
+    }
+    else {
+        Serial.println("Not verified");
+    }
+}
+#endif
+
+#if 0
 void loop()
 {
     // get msg
@@ -107,3 +149,4 @@ void loop()
     }
     radio::setModeRx();
 }
+#endif
