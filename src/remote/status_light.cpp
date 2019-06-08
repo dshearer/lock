@@ -2,8 +2,8 @@
 #include <Arduino.h>
 
 #define LED_RED_PIN     9
-#define LED_GREEN_PIN   6
-#define LED_BLUE_PIN    5
+#define LED_GREEN_PIN   5
+#define LED_BLUE_PIN    6
 
 #define DISPLAY_TIME_MS 1000
 
@@ -20,7 +20,7 @@ struct color_t
 };
 
 static const color_t g_success_color(0, LED_HIGH, 0);
-static const color_t g_unauth_color(LED_HIGH, LED_HIGH/3, 0);
+static const color_t g_unauth_color(LED_HIGH, LED_HIGH/2, 0);
 static const color_t g_lock_error_color(LED_HIGH, 0, 0);
 static const color_t g_radio_error_color(LED_HIGH, 0, 0);
 

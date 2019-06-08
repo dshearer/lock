@@ -3,8 +3,8 @@
 #include "control.h"
 #include "status_light.h"
 
-#define ENGAGE_BTN_PIN      3
-#define DISENGAGE_BTN_PIN   2
+#define ENGAGE_BTN_PIN      2
+#define DISENGAGE_BTN_PIN   3
 
 #define FEEDBACK_LED_PIN    4
 
