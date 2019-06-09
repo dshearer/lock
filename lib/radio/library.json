@@ -1,6 +1,6 @@
 {
     "name": "radio",
     "dependencies": [
-        "http://www.airspayce.com/mikem/arduino/RadioHead/RadioHead-1.89.zip"
+        "RadioHead"
     ]
 }

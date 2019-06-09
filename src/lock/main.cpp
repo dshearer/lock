@@ -10,7 +10,9 @@ Lock main.
 
 #define ACTUATE_TIMEOUT_MILLIS 5000
 
-static Array<KEY_LEN_BYTES> g_key = {};
+using safearray::ByteArray;
+
+static ByteArray<KEY_LEN_BYTES> g_key = {};
 
 static void set_status_light()
 {

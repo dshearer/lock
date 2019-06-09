@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <inttypes.h>
-#include <array.h>
+#include <mcu_safe_array.h>
 
 /*
 A radio using the 2.4GHz band.
@@ -43,7 +43,7 @@ typedef enum {
     ERR_TIMEOUT,
 } error_t;
 
-void setup(CSlice<KEY_LEN_BYTES> key, uint8_t my_id);
+void setup(safearray::CByteSlice<KEY_LEN_BYTES> key, uint8_t my_id);
 
 /*
 Send message.

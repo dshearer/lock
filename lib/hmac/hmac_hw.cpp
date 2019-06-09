@@ -7,6 +7,9 @@
 #define KEY_ZONE 2
 #define KEY_SLOT 0
 
+using safearray::CByteSlice;
+using safearray::ByteSlice;
+
 static_assert(DIGEST_LEN_BYTES == ATCA_SHA2_256_DIGEST_SIZE,
     "Bad digest length");
 
@@ -25,7 +28,7 @@ static void init_cryptochip() {
 
 Hmac::Hmac() {}
 
-void Hmac::setKey(CSlice<HMAC_KEY_LEN_BYTES> key) {
+void Hmac::setKey(CByteSlice<HMAC_KEY_LEN_BYTES> key) {
     init_cryptochip();
 
     /*
@@ -78,7 +81,7 @@ void Hmac::update(const void *data, size_t size) {
     }
 }
 
-void Hmac::operator>>(Slice<DIGEST_LEN_BYTES> dest) {
+void Hmac::operator>>(ByteSlice<DIGEST_LEN_BYTES> dest) {
     if (!this->_inited) {
         fail(F("Hmac not inited"));
     }

@@ -8,7 +8,9 @@ Remote main.
 #include "status_light.h"
 #include "control.h"
 
-static Array<KEY_LEN_BYTES> g_key = {};
+using safearray::ByteArray;
+
+static ByteArray<KEY_LEN_BYTES> g_key = {};
 
 void setup()
 {

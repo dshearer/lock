@@ -4,6 +4,9 @@
 #include <fail.h>
 #include "hmac.h"
 
+using safearray::ByteSlice;
+using safearray::CByteSlice;
+
 static_assert(DIGEST_LEN_BYTES == ATCA_SHA2_256_DIGEST_SIZE,
     "Bad digest length");
 
@@ -20,7 +23,7 @@ void Sha256::update(const void *data, size_t size) {
     atcac_sw_sha2_256_update(&this->_ctx, (const uint8_t *) data, size);
 }
 
-void Sha256::operator>>(Slice<DIGEST_LEN_BYTES> dest) {
+void Sha256::operator>>(ByteSlice<DIGEST_LEN_BYTES> dest) {
     if (!this->_inited) {
         fail(F("Sha256 not inited"));
     }
@@ -29,12 +32,12 @@ void Sha256::operator>>(Slice<DIGEST_LEN_BYTES> dest) {
 
 Hmac::Hmac() {}
 
-void Hmac::setKey(CSlice<HMAC_KEY_LEN_BYTES> key) {
+void Hmac::setKey(CByteSlice<HMAC_KEY_LEN_BYTES> key) {
     this->_key = key;
 }
 
 Hmac& Hmac::init() {
-    if (this->_key.data() == NULL) {
+    if (this->_key.cdata() == NULL) {
         fail(F("Key not set"));
     }
 
@@ -58,7 +61,7 @@ void Hmac::update(const void *data, size_t size) {
     this->_sha.update(data, size);
 }
 
-void Hmac::operator>>(Slice<DIGEST_LEN_BYTES> dest) {
+void Hmac::operator>>(ByteSlice<DIGEST_LEN_BYTES> dest) {
     if (!this->_inited) {
         fail(F("Hmac not inited"));
     }

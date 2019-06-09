@@ -2,3 +2,6 @@
 	path = lib/cryptoauthlib/src/cryptoauthlib
 	url = git@github.com:dshearer/cryptoauthlib.git
 	branch = dylan-arduino
+[submodule "lib/mcu-safe-array"]
+	path = lib/mcu-safe-array
+	url = https://github.com/dshearer/mcu-safe-array.git

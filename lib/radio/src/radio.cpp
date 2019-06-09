@@ -6,7 +6,7 @@
 #include <words.h>
 #include <utils.h>
 #include <hmac.h>
-#include <array.h>
+#include <mcu_safe_array.h>
 #include "radio.h"
 
 /*
@@ -16,6 +16,9 @@ NOTE: Nonces are stored little-endian.
 /*
 Max msg size is RH_NRF24_MAX_MESSAGE_LEN = 28 bytes.
 */
+
+using safearray::ByteArray;
+using safearray::CByteSlice;
 
 typedef Word<4> nonce_t;
 
@@ -33,12 +36,12 @@ typedef enum {
 typedef struct {
     uint8_t         type; // == PACKET_TYPE_1
     hashed_msg_t    hashed_msg; // 11 bytes
-    Array<DIGEST_LEN_BYTES/2>         digest_1; // 16 bytes
+    ByteArray<DIGEST_LEN_BYTES/2>         digest_1; // 16 bytes
 } __attribute__((packed)) packet_1_t; // 28 bytes
 
 typedef struct {
     uint8_t type; // == PACKET_TYPE_2
-    Array<DIGEST_LEN_BYTES/2>         digest_2; // 16 bytes
+    ByteArray<DIGEST_LEN_BYTES/2>         digest_2; // 16 bytes
 } __attribute__((packed)) packet_2_t; // 17 bytes
 
 typedef struct {
@@ -52,10 +55,13 @@ static nonce_t              g_other_latest_nonce; // 4 bytes
 static RH_NRF24             g_driver(8, 10);
 static RHReliableDatagram   g_manager(g_driver);
 
-static Array<sizeof(packet_1_t)> g_buf = {};
-static hashed_msg_t              g_hashed_msg;
-static Hmac                      g_hmac;
-static Array<DIGEST_LEN_BYTES>   g_digest = {};
+#define MAX_PACKET_SIZE (sizeof(packet_1_t) > sizeof(packet_2_t) ? \
+    sizeof(packet_1_t) : sizeof(packet_2_t))
+
+static ByteArray<MAX_PACKET_SIZE>    g_buf = {};
+static hashed_msg_t                  g_hashed_msg;
+static Hmac                          g_hmac;
+static ByteArray<DIGEST_LEN_BYTES>   g_digest = {};
 
 static_assert(sizeof(packet_1_t) <= RH_NRF24_MAX_MESSAGE_LEN, "Bad packet 1 len");
 static_assert(sizeof(packet_2_t) <= RH_NRF24_MAX_MESSAGE_LEN, "Bad packet 2 len");
@@ -65,7 +71,7 @@ static_assert(sizeof(packet_2_t) <= RH_NRF24_MAX_MESSAGE_LEN, "Bad packet 2 len"
 #define SWITCH_RADIO_MODE
 // #define SEND_ACK  // adds ~2,302 ms to send operation
 
-void setup(CSlice<KEY_LEN_BYTES> key, uint8_t my_id)
+void setup(CByteSlice<KEY_LEN_BYTES> key, uint8_t my_id)
 {
     Serial.println(F("radio::setup"));
     // g_driver.setRF(RH_NRF24::DataRate250kbps, RH_NRF24::TransmitPower0dBm);
@@ -93,7 +99,7 @@ int send(const msg_t *msg, uint8_t to)
     // make packet 1
     Serial.println(F("Making packets"));
     Serial.flush();
-    packet_1_t *pack_1 = g_buf.cast<packet_1_t>();
+    packet_1_t *pack_1 = safearray::cast<packet_1_t>(g_buf);
     pack_1->type = PACKET_TYPE_1;
     memcpy(&pack_1->hashed_msg.nonce, &g_my_latest_nonce,
         sizeof(pack_1->hashed_msg.nonce));
@@ -114,7 +120,7 @@ int send(const msg_t *msg, uint8_t to)
     // make packet 2
     Serial.println(F("Sending pkt 2"));
     Serial.flush();
-    packet_2_t *pack_2 = g_buf.cast<packet_2_t>();
+    packet_2_t *pack_2 = safearray::cast<packet_2_t>(g_buf);
     pack_2->type = PACKET_TYPE_2;
     pack_2->digest_2 << g_digest.cslice<DIGEST_LEN_BYTES/2>();
 
@@ -177,7 +183,7 @@ static const T *interp_buffer(size_t len, packet_type_t ptype) {
         Serial.println(sizeof(T));
         return NULL;
     }
-    const T* packet = g_buf.cast<T>();
+    const T* packet = safearray::cast<T>(g_buf);
     if (packet->type != ptype) {
         Serial.print(F("Wrong type for packet "));
         Serial.println(ptype);
