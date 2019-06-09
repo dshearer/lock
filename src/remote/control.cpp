@@ -10,7 +10,7 @@
 
 #define BTN_PRESSED_LEVEL   LOW
 
-#define REPLY_TIMEOUT_SECS  5
+#define REPLY_TIMEOUT_SECS  7
 
 namespace control {
 
@@ -31,7 +31,7 @@ static void handleDisengagePressed()
     g_pushed_button = DISENGAGE_BTN_PIN;
 }
 
-static status_light::status_t getResponse()
+static status_t getResponse()
 {
     // get response
     radio::error_t err = radio::ERR_NULL;
@@ -39,7 +39,7 @@ static status_light::status_t getResponse()
 
     // handle error
     if (err != radio::ERR_NULL) {
-        return status_light::STATUS_RADIO_ERROR;
+        return STATUS_RADIO_ERROR;
     }
 
     // handle response
@@ -47,13 +47,13 @@ static status_light::status_t getResponse()
     switch (resp->code)
     {
     case radio::LOCK_MSG_SUCCESS:
-        return status_light::STATUS_SUCCESS;
+        return STATUS_SUCCESS;
 
     case radio::LOCK_MSG_UNAUTHN:
-        return status_light::STATUS_UNAUTHN;
+        return STATUS_UNAUTHN;
 
     default:
-        return status_light::STATUS_LOCK_ERROR;
+        return STATUS_LOCK_ERROR;
     }
 }
 
@@ -75,10 +75,13 @@ static void sendCmd(radio::msg_code_t cmd)
     }
 
     // get response
-    const status_light::status_t status = getResponse();
+    const status_t status = getResponse();
 
     // show status
-    status_light::show_status(status);
+    status_light::showStatus(status);
+    Serial.print(F("Lock resp: "));
+    status_light::printStatus(status);
+    Serial.println(F(""));
 
     const unsigned long time_diff = millis() - start_time;
     Serial.print(F("Op time: "));

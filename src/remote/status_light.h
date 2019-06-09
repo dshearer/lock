@@ -1,17 +1,13 @@
 #ifndef __STATUS_LIGHT_H__
 #define __STATUS_LIGHT_H__
 
+#include "status.h"
+
 namespace status_light {
 
-typedef enum {
-    STATUS_SUCCESS,
-    STATUS_UNAUTHN,
-    STATUS_LOCK_ERROR,
-    STATUS_RADIO_ERROR,
-} status_t;
-
 void setup();
-void show_status(status_t status);
+void showStatus(status_t status);
+void printStatus(status_t status);
 
 };
 

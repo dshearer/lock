@@ -42,13 +42,13 @@ void status_light::setup()
     pinMode(LED_GREEN_PIN,  OUTPUT);
     pinMode(LED_BLUE_PIN,   OUTPUT);
 
-    show_status(STATUS_SUCCESS);
-    show_status(STATUS_UNAUTHN);
-    show_status(STATUS_LOCK_ERROR);
-    show_status(STATUS_RADIO_ERROR);
+    showStatus(STATUS_SUCCESS);
+    showStatus(STATUS_UNAUTHN);
+    showStatus(STATUS_LOCK_ERROR);
+    showStatus(STATUS_RADIO_ERROR);
 }
 
-void status_light::show_status(status_t status)
+void status_light::showStatus(status_t status)
 {
     // show light
     switch (status) {
@@ -66,6 +66,28 @@ void status_light::show_status(status_t status)
 
     case STATUS_RADIO_ERROR:
         showColor(g_radio_error_color);
+        break;
+    }
+}
+
+void status_light::printStatus(status_t status)
+{
+    // show light
+    switch (status) {
+    case STATUS_SUCCESS:
+        Serial.print(F("SUCCESS"));
+        break;
+
+    case STATUS_UNAUTHN:
+        Serial.print(F("UNAUTHN"));
+        break;
+
+    case STATUS_LOCK_ERROR:
+        Serial.print(F("LOCK_ERROR"));
+        break;
+
+    case STATUS_RADIO_ERROR:
+        Serial.print(F("RATIO_ERROR"));
         break;
     }
 }
