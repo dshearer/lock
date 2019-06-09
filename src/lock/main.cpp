@@ -8,6 +8,8 @@ Lock main.
 #include "status_sensor.h"
 #include "motor.h"
 
+#define ACTUATE_TIMEOUT_MILLIS 5000
+
 static Array<KEY_LEN_BYTES> g_key = {};
 
 static void set_status_light()
@@ -18,35 +20,30 @@ static void set_status_light()
     // status_light::show_status(status);
 }
 
-void engage()
-{
-    if (status_sensor::getStatus() == STATUS_ENGAGED) {
-        return;
+static int actuate(void (*actuate_f)(void), status_t targetStatus) {
+    if (status_sensor::getStatus() == targetStatus) {
+        return 0;
     }
 
-    Serial.println(F("Engaging..."));
-    motor::runEngage();
-    while (status_sensor::getStatus() != STATUS_ENGAGED) {
+    const unsigned long stopTime = millis() + ACTUATE_TIMEOUT_MILLIS;
+    actuate_f();
+    while (status_sensor::getStatus() != targetStatus && millis() < stopTime) {
     }
     motor::stop();
 
-    Serial.println(F("Engaged"));
+    return status_sensor::getStatus() == targetStatus ? 0 : -1;
 }
 
-void disengage()
+static int engage()
 {
-    if (status_sensor::getStatus() == STATUS_DISENGAGED) {
-        return;
-    }
+    Serial.println(F("Engaging..."));
+    return actuate(motor::runEngage, STATUS_ENGAGED);
+}
 
+static int disengage()
+{
     Serial.println(F("Disengaging..."));
-    motor::runDisengage();
-    while (status_sensor::getStatus() != STATUS_DISENGAGED) {
-        delay(100);
-    }
-    motor::stop();
-
-    Serial.println(F("Disengaged"));
+    return actuate(motor::runDisengage, STATUS_DISENGAGED);
 }
 
 static radio::msg_code_t handle_msg(const radio::msg_t *msg)
@@ -56,12 +53,18 @@ static radio::msg_code_t handle_msg(const radio::msg_t *msg)
     switch (msg->code) {
     case radio::REMOTE_MSG_ENGAGE:
         Serial.println(F("Got engage msg"));
-        engage();
+        if (engage() != 0) {
+            Serial.println(F("Engage failed"));
+            resp_code = radio::LOCK_MSG_FAILURE;
+        }
         break;
 
     case radio::REMOTE_MSG_DISENGAGE:
         Serial.println(F("Got disengage msg"));
-        disengage();
+        if (disengage() != 0) {
+            Serial.println(F("Disengage failed"));
+            resp_code = radio::LOCK_MSG_FAILURE;
+        }
         break;
 
     default:
