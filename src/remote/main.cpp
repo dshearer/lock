@@ -23,7 +23,7 @@ void setup()
 void loop()
 {
   // LowPower.idle(SLEEP_FOREVER, ADC_ON, TIMER2_ON, TIMER1_ON, TIMER0_ON, SPI_ON, USART0_ON, TWI_ON);
-  Serial.println(F("Loop"));
+  // Serial.println(F("Loop"));
   control::loop();
 
   Serial.flush();

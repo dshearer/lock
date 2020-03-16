@@ -48,23 +48,33 @@ void setup(safearray::CByteSlice<KEY_LEN_BYTES> key, uint8_t my_id);
 /*
 Send message.
 
-@return 0 on success; non-0 on failure.
+@return 0 on success; non-0 if we never got an ACK from the other device.
 */
 int send(const msg_t *msg, uint8_t to);
 
 /*
-Receive an authentic message.  If no authentic message is available,
-returns NULL immediately.
+Receive an authentic message.  Does not block: if no message is available,
+returns immediately.
 
-@param error_p If an error occurs, an appropriate code is written here
-and NULL is returned.
-(May be NULL.)
+@param error_p If a message is available but it can't be parsed or authenticated,
+an appropriate code is written here and NULL is returned.  (May be NULL.)
 
-@return A message on success; NULL on error.
+@return A message on success; NULL if no message is available or an error occurs.
 */
 const msg_t *recv(error_t *error_p);
 
-const msg_t *recvTimeout(uint8_t timeout, error_t *error_p);
+/*
+Receive an authentic message.  Blocks: won't return until a message is available
+or timeout has occurred.
+
+@param timeout Max time to wait (milliseconds).
+@param error_p If a message is available but it can't be parsed or authenticated,
+an appropriate code is written here and NULL is returned.  (May be NULL.)
+
+@return A message on success; NULL if no message is available, timeout occurs,
+or an error occurs.
+*/
+const msg_t *recvTimeout(uint16_t timeout, error_t *error_p);
 
 void setModeIdle();
 void setModeRx();

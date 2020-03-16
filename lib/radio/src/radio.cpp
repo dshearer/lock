@@ -8,6 +8,7 @@
 #include <hmac.h>
 #include <mcu_safe_array.h>
 #include "radio.h"
+#include "clockspeed.h"
 
 /*
 NOTE: Nonces are stored little-endian.
@@ -76,6 +77,8 @@ void setup(CByteSlice<KEY_LEN_BYTES> key, uint8_t my_id)
     Serial.println(F("radio::setup"));
     // g_driver.setRF(RH_NRF24::DataRate250kbps, RH_NRF24::TransmitPower0dBm);
     g_manager.setThisAddress(my_id);
+    g_manager.setRetries(5);
+    g_manager.setTimeout(1*1000);
     g_manager.init();
     g_hmac.setKey(key);
 
@@ -113,7 +116,7 @@ int send(const msg_t *msg, uint8_t to)
     Serial.println(F("Sending pkt 1"));
     Serial.flush();
     if (!g_manager.sendtoWait((uint8_t *) pack_1, sizeof(*pack_1), to)) {
-        Serial.println(F("sendtoWait 1 err"));
+        Serial.println(F("Didn't get ACK"));
         return -1;
     }
 
@@ -126,7 +129,7 @@ int send(const msg_t *msg, uint8_t to)
 
     // send packet 2
     if (!g_manager.sendtoWait((uint8_t *) pack_2, sizeof(*pack_2), to)) {
-        Serial.println(F("sendtoWait 2 err"));
+        Serial.println(F("Didn't get ACK"));
         return -1;
     }
     
@@ -192,17 +195,27 @@ static const T *interp_buffer(size_t len, packet_type_t ptype) {
     return packet;
 }
 
-const msg_t *recv(error_t *error_p)
+static const msg_t *_recv(uint16_t *timeout, error_t *error_p)
 {
-    if (!g_manager.available()) {
-        return NULL;
-    }
-    Serial.println(F("recv"));
-
     // get packet 1
+    Serial.println(F("recv"));
+    Serial.flush();
     uint8_t len = sizeof(g_buf);
     uint8_t from = 0;
-    if (!g_manager.recvfromAck((uint8_t *) g_buf.data(), &len, &from)) {
+    bool gotMsg = false;
+    /*
+    Lock and remote run at different CPU speeds, and this can cause remote to miss lock's acks.
+    So on the lock we switch to 8MHz when receiving.
+    */
+    setPrescale(CLOCK_PRESCALER_2);
+    if (timeout == NULL) {
+        gotMsg = g_manager.recvfromAck((uint8_t *) g_buf.data(), &len, &from);
+    } else {
+        gotMsg = g_manager.recvfromAckTimeout((uint8_t *) g_buf.data(), &len,
+            *timeout, &from);
+    }
+    setPrescale(CLOCK_PRESCALER_1);
+    if (!gotMsg) {
         return NULL;
     }
     const packet_1_t *pack_1 = interp_buffer<packet_1_t>(len, PACKET_TYPE_1);
@@ -229,7 +242,10 @@ const msg_t *recv(error_t *error_p)
 
     // get packet 2
     len = sizeof(g_buf);
-    if (!g_manager.recvfromAckTimeout((uint8_t *) g_buf.data(), &len, 5000)) {
+    setPrescale(CLOCK_PRESCALER_2);
+    gotMsg = g_manager.recvfromAckTimeout((uint8_t *) g_buf.data(), &len, 5000);
+    setPrescale(CLOCK_PRESCALER_1);
+    if (!gotMsg) {
         Serial.println(F("Never got packet 2"));
         RET_ERR(ERR_BAD_MSG);
         return NULL;
@@ -282,25 +298,13 @@ const msg_t *recv(error_t *error_p)
     return &g_hashed_msg.msg;
 }
 
-const msg_t *recvTimeout(uint8_t timeout, error_t *error_p)
+const msg_t *recv(error_t *error_p) {
+    return _recv(NULL, error_p);
+}
+
+const msg_t *recvTimeout(uint16_t timeout, error_t *error_p)
 {
-    const unsigned long end_time = millis() + (timeout * 1000UL);
-    error_t local_err = ERR_NULL;
-    while (millis() < end_time)
-    {
-        const msg_t *msg = recv(&local_err);
-        if (msg == NULL && local_err == ERR_NULL) {
-            continue;
-        }
-
-        /* Got msg or error */
-        RET_ERR(local_err);
-        return msg;
-    }
-
-    /* Timeout */
-    RET_ERR(ERR_TIMEOUT);
-    return NULL;
+    return _recv(&timeout, error_p);
 }
 
 void setModeIdle()

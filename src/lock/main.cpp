@@ -89,8 +89,10 @@ void setup()
 }
 
 void loop() {
+    Serial.println(F("Awaiting cmd"));
+
     radio::error_t err = radio::ERR_NULL;
-    const radio::msg_t *msg = radio::recv(&err);
+    const radio::msg_t *msg = radio::recvTimeout(30000, &err);
     if (msg == NULL) {
         if (err != radio::ERR_NULL) {
             Serial.println(F("recv error"));

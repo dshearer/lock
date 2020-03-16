@@ -10,7 +10,7 @@
 
 #define BTN_PRESSED_LEVEL   LOW
 
-#define REPLY_TIMEOUT_SECS  7
+#define REPLY_TIMEOUT_SECS  10
 
 namespace control {
 
@@ -35,11 +35,15 @@ static status_t getResponse()
 {
     // get response
     radio::error_t err = radio::ERR_NULL;
-    const radio::msg_t *resp = radio::recvTimeout(REPLY_TIMEOUT_SECS, &err);
+    const radio::msg_t *resp = radio::recvTimeout(REPLY_TIMEOUT_SECS*1000, &err);
 
     // handle error
     if (err != radio::ERR_NULL) {
         return STATUS_RADIO_ERROR;
+    }
+    if (resp == NULL) {
+        Serial.println(F("No resp from lock"));
+        return STATUS_LOCK_ERROR;
     }
 
     // handle response
@@ -52,7 +56,11 @@ static status_t getResponse()
     case radio::LOCK_MSG_UNAUTHN:
         return STATUS_UNAUTHN;
 
+    case radio::LOCK_MSG_FAILURE:
+        return STATUS_LOCK_ERROR;
+
     default:
+        Serial.println(F("Unkn resp code"));
         return STATUS_LOCK_ERROR;
     }
 }
